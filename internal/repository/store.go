@@ -82,8 +82,18 @@ func (s *Store) load() error {
 		if snapshot.SchemaVersion != schemaVersion {
 			return fmt.Errorf("快照 schemaVersion 不一致")
 		}
-		if snapshot.Sessions != nil {
-			s.sessions = snapshot.Sessions
+		// 事件日志是持久化的事实来源：每次提交都先同步事件再更新快照，
+		// 因此当进程在写快照前退出时，快照可能落后于事件日志。这里仅用
+		// 快照补充事件日志未能覆盖的会话，绝不用旧快照覆盖事件日志中较
+		// 新的会话状态，以避免重启后回退版本号和会话名称。
+		for id, snap := range snapshot.Sessions {
+			if snap == nil {
+				continue
+			}
+			if existing, ok := s.sessions[id]; ok && existing.Version >= snap.Version {
+				continue
+			}
+			s.sessions[id] = cloneSession(snap)
 		}
 	} else if !os.IsNotExist(err) {
 		return err

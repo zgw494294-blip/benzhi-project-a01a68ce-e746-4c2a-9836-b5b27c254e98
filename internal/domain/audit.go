@@ -15,7 +15,10 @@ func (s *TastingSession) AuditSummary() AuditSummary {
 	if len(s.Audit) == 0 {
 		return result
 	}
-	entries := append([]AuditEntry(nil), s.Audit...)
+	entries := make([]AuditEntry, 0, len(s.Audit))
+	for _, entry := range s.Audit {
+		entries = append(entries, cloneAuditEntry(entry))
+	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].At.Before(entries[j].At) })
 	for _, entry := range entries {
 		result.ByAction[entry.Action]++
@@ -35,9 +38,22 @@ func (s *TastingSession) AuditEntries(actorFilter, actionFilter string) []AuditE
 		if actionFilter != "" && entry.Action != actionFilter {
 			continue
 		}
-		copy := entry
-		entries = append(entries, copy)
+		entries = append(entries, cloneAuditEntry(entry))
 	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].At.Before(entries[j].At) })
 	return entries
+}
+
+// cloneAuditEntry returns a copy of in whose Detail map is independent of the
+// session's internal audit state. Callers may freely mutate the returned
+// Detail without polluting subsequent reads of s.Audit.
+func cloneAuditEntry(in AuditEntry) AuditEntry {
+	out := in
+	if in.Detail != nil {
+		out.Detail = make(map[string]string, len(in.Detail))
+		for k, v := range in.Detail {
+			out.Detail[k] = v
+		}
+	}
+	return out
 }

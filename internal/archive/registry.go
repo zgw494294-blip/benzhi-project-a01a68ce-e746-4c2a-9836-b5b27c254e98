@@ -28,6 +28,11 @@ func NewRegistryAt(dir string) (*Registry, error) {
 	return r, nil
 }
 func (r *Registry) Put(receipt *ArchiveReceipt) error {
+	if receipt == nil {
+		return domain.NewError(domain.CodeValidation, "归档凭据为空")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, exists := r.receipts[receipt.ID]; exists {
 		return domain.NewError(domain.CodeConflict, "归档凭据已存在")
 	}
@@ -42,6 +47,8 @@ func (r *Registry) Put(receipt *ArchiveReceipt) error {
 	return nil
 }
 func (r *Registry) Get(id string) (*ArchiveReceipt, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	value, ok := r.receipts[id]
 	if !ok {
 		return nil, false
@@ -51,6 +58,8 @@ func (r *Registry) Get(id string) (*ArchiveReceipt, bool) {
 }
 
 func (r *Registry) List() []*ArchiveReceipt {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	out := make([]*ArchiveReceipt, 0, len(r.receipts))
 	for _, value := range r.receipts {
 		clone := *value

@@ -24,7 +24,7 @@ type IdempotentResult struct {
 
 type Store struct {
 	dir        string
-	mu         sync.Mutex
+	mu         sync.RWMutex
 	events     []Event
 	sessions   map[string]*domain.TastingSession
 	idempotent map[string]IdempotentResult
@@ -80,8 +80,8 @@ func (s *Store) load() error {
 }
 
 func (s *Store) ListSessions() []*domain.TastingSession {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	out := make([]*domain.TastingSession, 0, len(s.sessions))
 	for _, session := range s.sessions {
 		out = append(out, cloneSession(session))
@@ -90,8 +90,8 @@ func (s *Store) ListSessions() []*domain.TastingSession {
 }
 
 func (s *Store) GetSession(id string) (*domain.TastingSession, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if session, ok := s.sessions[id]; ok {
 		return cloneSession(session), nil
 	}
@@ -175,10 +175,9 @@ func writeSnapshot(path string, sessions map[string]*domain.TastingSession) erro
 }
 
 func (s *Store) EventChainHash() string {
-	if len(s.events) == 0 {
-		return ""
-	}
-	return s.events[len(s.events)-1].Hash
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return chainHead(s.events)
 }
 
 func (s *Store) PutIdempotency(key string, status int, body any) error {
@@ -196,8 +195,8 @@ func (s *Store) PutIdempotency(key string, status int, body any) error {
 }
 
 func (s *Store) GetIdempotency(key string) (IdempotentResult, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	result, ok := s.idempotent[key]
 	return result, ok
 }
@@ -230,6 +229,6 @@ func cloneSession(in *domain.TastingSession) *domain.TastingSession {
 	return &out
 }
 
-func (s *Store) Validate() error { s.mu.Lock(); defer s.mu.Unlock(); return verifyEventChain(s.events) }
+func (s *Store) Validate() error { s.mu.RLock(); defer s.mu.RUnlock(); return verifyEventChain(s.events) }
 
 func (s *Store) String() string { return fmt.Sprintf("Store(%s)", s.dir) }

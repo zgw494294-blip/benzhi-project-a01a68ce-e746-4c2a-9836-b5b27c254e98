@@ -12,9 +12,9 @@ import (
 )
 
 func (s *Store) PersistedEventChainHash() (string, error) {
-	s.mu.Lock()
+	s.mu.RLock()
 	path := filepath.Join(s.dir, "events.jsonl")
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -39,9 +39,9 @@ func (s *Store) PersistedEventChainHash() (string, error) {
 }
 
 func (s *Store) PersistedSession(sessionID string) (*domain.TastingSession, error) {
-	s.mu.Lock()
+	s.mu.RLock()
 	path := filepath.Join(s.dir, "sessions.snapshot.json")
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -68,9 +68,9 @@ func (s *Store) VerifyPersistedProjection(sessionID string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
+	s.mu.RLock()
 	path := filepath.Join(s.dir, "events.jsonl")
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -115,6 +115,8 @@ type StoreHealth struct {
 }
 
 func (s *Store) Health() StoreHealth {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return StoreHealth{SchemaVersion: schemaVersion, EventCount: len(s.events), SessionCount: len(s.sessions), IdempotencyCount: len(s.idempotent), ChainHead: chainHead(s.events), Valid: verifyEventChain(s.events) == nil}
 }
 
@@ -126,6 +128,8 @@ func chainHead(events []Event) string {
 }
 
 func (s *Store) EventsForSession(sessionID string) []Event {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	out := make([]Event, 0)
 	for _, event := range s.events {
 		if event.SessionID != sessionID {
@@ -139,8 +143,8 @@ func (s *Store) EventsForSession(sessionID string) []Event {
 }
 
 func (s *Store) VerifySessionProjection(sessionID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	current, exists := s.sessions[sessionID]
 	if !exists {
 		return domain.NewError(domain.CodeNotFound, "评审会话不存在")
@@ -167,12 +171,12 @@ func (s *Store) VerifySessionProjection(sessionID string) error {
 }
 
 func (s *Store) VerifyAllProjections() error {
-	s.mu.Lock()
+	s.mu.RLock()
 	ids := make([]string, 0, len(s.sessions))
 	for id := range s.sessions {
 		ids = append(ids, id)
 	}
-	s.mu.Unlock()
+	s.mu.RUnlock()
 	sort.Strings(ids)
 	for _, id := range ids {
 		if err := s.VerifySessionProjection(id); err != nil {

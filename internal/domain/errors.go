@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type ErrorCode string
 
@@ -34,7 +37,8 @@ func NewDetailedError(code ErrorCode, message string, details []ErrorDetail) err
 }
 
 func ErrorCodeOf(err error) ErrorCode {
-	if e, ok := err.(*DomainError); ok {
+	var e *DomainError
+	if errors.As(err, &e) {
 		return e.Code
 	}
 	return "internal"

@@ -175,8 +175,6 @@ func writeSnapshot(path string, sessions map[string]*domain.TastingSession) erro
 }
 
 func (s *Store) EventChainHash() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if len(s.events) == 0 {
 		return ""
 	}

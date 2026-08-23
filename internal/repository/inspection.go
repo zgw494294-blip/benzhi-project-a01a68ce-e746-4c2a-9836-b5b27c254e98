@@ -115,8 +115,6 @@ type StoreHealth struct {
 }
 
 func (s *Store) Health() StoreHealth {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	return StoreHealth{SchemaVersion: schemaVersion, EventCount: len(s.events), SessionCount: len(s.sessions), IdempotencyCount: len(s.idempotent), ChainHead: chainHead(s.events), Valid: verifyEventChain(s.events) == nil}
 }
 
@@ -128,8 +126,6 @@ func chainHead(events []Event) string {
 }
 
 func (s *Store) EventsForSession(sessionID string) []Event {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	out := make([]Event, 0)
 	for _, event := range s.events {
 		if event.SessionID != sessionID {

@@ -33,14 +33,13 @@ func (r *Registry) Put(receipt *ArchiveReceipt) error {
 	if _, exists := r.receipts[receipt.ID]; exists {
 		return domain.NewError(domain.CodeConflict, "归档凭据已存在")
 	}
-	clone := *receipt
-	r.receipts[receipt.ID] = &clone
 	if r.path != "" {
 		if err := r.persist(); err != nil {
-			delete(r.receipts, receipt.ID)
 			return err
 		}
 	}
+	clone := *receipt
+	r.receipts[receipt.ID] = &clone
 	return nil
 }
 func (r *Registry) Get(id string) (*ArchiveReceipt, bool) {

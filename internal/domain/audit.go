@@ -36,12 +36,6 @@ func (s *TastingSession) AuditEntries(actorFilter, actionFilter string) []AuditE
 			continue
 		}
 		copy := entry
-		if entry.Detail != nil {
-			copy.Detail = map[string]string{}
-			for k, v := range entry.Detail {
-				copy.Detail[k] = v
-			}
-		}
 		entries = append(entries, copy)
 	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].At.Before(entries[j].At) })

@@ -125,13 +125,13 @@ func (s *Store) commit(session *domain.TastingSession, expectedVersion int64, ac
 		e.PreviousHash = s.events[len(s.events)-1].Hash
 	}
 	e.Hash = eventHash(e)
-	if err := appendEvent(filepath.Join(s.dir, "events.jsonl"), e); err != nil {
-		return err
-	}
 	s.events = append(s.events, e)
 	s.sessions[session.ID] = copy
 	session.Version = copy.Version
 	session.UpdatedAt = copy.UpdatedAt
+	if err := appendEvent(filepath.Join(s.dir, "events.jsonl"), e); err != nil {
+		return err
+	}
 	if err := writeSnapshot(filepath.Join(s.dir, "sessions.snapshot.json"), s.sessions); err != nil {
 		return err
 	}

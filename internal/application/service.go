@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -67,7 +68,10 @@ func (a *Service) Configure(id string, cfg domain.SessionConfig, actor string, v
 	return a.mutate(id, actor, version, "session_configured", func(s *domain.TastingSession) error { return s.Configure(cfg, actor, a.timestamp()) })
 }
 func (a *Service) AddSample(id string, in domain.SampleInput, actor string, version int64) (*SessionView, error) {
-	return a.mutate(id, actor, version, "sample_added", func(s *domain.TastingSession) error { return s.AddSample(in, actor, a.timestamp()) })
+	return a.AddSampleContext(context.Background(), id, in, actor, version)
+}
+func (a *Service) AddSampleContext(ctx context.Context, id string, in domain.SampleInput, actor string, version int64) (*SessionView, error) {
+	return a.mutateWithContext(ctx, id, actor, version, "sample_added", func(s *domain.TastingSession) error { return s.AddSample(in, actor, a.timestamp()) })
 }
 func (a *Service) AddSamplesBatch(id string, inputs []domain.SampleInput, actor string, version int64, key string) (*SessionView, error) {
 	if result, ok := a.Store.GetIdempotency(key); ok {
@@ -213,6 +217,9 @@ func (a *Service) mutate(id, actor string, version int64, action string, fn func
 	return a.mutateWith(id, actor, version, action, fn)
 }
 func (a *Service) mutateWith(id, actor string, version int64, action string, fn func(*domain.TastingSession) error) (*SessionView, error) {
+	return a.mutateWithContext(context.Background(), id, actor, version, action, fn)
+}
+func (a *Service) mutateWithContext(ctx context.Context, id, actor string, version int64, action string, fn func(*domain.TastingSession) error) (*SessionView, error) {
 	session, err := a.Store.GetSession(id)
 	if err != nil {
 		return nil, err
@@ -223,7 +230,7 @@ func (a *Service) mutateWith(id, actor string, version int64, action string, fn 
 	if err := fn(session); err != nil {
 		return nil, err
 	}
-	if err := a.Store.SaveSession(session, version, action, actor); err != nil {
+	if err := a.Store.SaveSessionContext(ctx, session, version, action, actor); err != nil {
 		return nil, err
 	}
 	return a.view(session, actor), nil

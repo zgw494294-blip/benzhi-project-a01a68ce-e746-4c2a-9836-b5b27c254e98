@@ -168,7 +168,7 @@ func (s *Server) addSample(w http.ResponseWriter, r *http.Request) {
 		handleError(w, domain.NewError(domain.CodeValidation, "请求 JSON 无效"))
 		return
 	}
-	view, err := s.app.AddSample(s.id(r), in, actor(r), version(r))
+	view, err := s.app.AddSampleContext(r.Context(), s.id(r), in, actor(r), version(r))
 	if err != nil {
 		handleError(w, err)
 		return

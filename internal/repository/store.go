@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,7 +107,16 @@ func (s *Store) SaveSession(session *domain.TastingSession, expectedVersion int6
 	return s.commit(session, expectedVersion, action, actor)
 }
 
+func (s *Store) SaveSessionContext(ctx context.Context, session *domain.TastingSession, expectedVersion int64, action, actor string) error {
+	return s.commitContext(ctx, session, expectedVersion, action, actor)
+}
+
 func (s *Store) commit(session *domain.TastingSession, expectedVersion int64, action, actor string) error {
+	return s.commitContext(context.Background(), session, expectedVersion, action, actor)
+}
+
+func (s *Store) commitContext(ctx context.Context, session *domain.TastingSession, expectedVersion int64, action, actor string) error {
+	ctx = context.WithoutCancel(ctx)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current, exists := s.sessions[session.ID]

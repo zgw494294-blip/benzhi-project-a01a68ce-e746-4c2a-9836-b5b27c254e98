@@ -71,6 +71,23 @@ func (s *Store) load() error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
+	if b, err := os.ReadFile(filepath.Join(s.dir, "sessions.snapshot.json")); err == nil {
+		var snapshot struct {
+			SchemaVersion int                               `json:"schemaVersion"`
+			Sessions      map[string]*domain.TastingSession `json:"sessions"`
+		}
+		if err := json.Unmarshal(b, &snapshot); err != nil {
+			return err
+		}
+		if snapshot.SchemaVersion != schemaVersion {
+			return fmt.Errorf("快照 schemaVersion 不一致")
+		}
+		if snapshot.Sessions != nil {
+			s.sessions = snapshot.Sessions
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 	if b, err := os.ReadFile(filepath.Join(s.dir, "idempotency.json")); err == nil {
 		_ = json.Unmarshal(b, &s.idempotent)
 	} else if !os.IsNotExist(err) {

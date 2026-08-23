@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"sort"
 
 	"sensory-blind-review/internal/archive"
@@ -96,31 +97,35 @@ func (a *Service) ListReceipts() []*archive.ArchiveReceipt {
 
 func (a *Service) ExportPackage(receiptID string) ([]byte, error) {
 	if _, err := a.ValidateArchive(receiptID); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("验证归档凭据 %s: %w", receiptID, err)
 	}
 	receipt, err := a.Receipt(receiptID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取归档凭据 %s: %w", receiptID, err)
 	}
 	session, err := a.Store.GetSession(receipt.SessionID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取归档会话 %s: %w", receipt.SessionID, err)
 	}
 	pkg, err := a.Archive.BuildPackage(receipt, session)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("构建归档封装 %s: %w", receiptID, err)
 	}
-	return a.Archive.ExportPackage(pkg)
+	body, err := a.Archive.ExportPackage(pkg)
+	if err != nil {
+		return nil, fmt.Errorf("导出归档封装 %s: %w", receiptID, err)
+	}
+	return body, nil
 }
 
 func (a *Service) ValidateArchive(receiptID string) (archive.ValidationReport, error) {
 	receipt, err := a.Receipt(receiptID)
 	if err != nil {
-		return archive.ValidationReport{}, err
+		return archive.ValidationReport{}, fmt.Errorf("读取归档凭据 %s: %w", receiptID, err)
 	}
 	session, err := a.Store.GetSession(receipt.SessionID)
 	if err != nil {
-		return archive.ValidationReport{}, err
+		return archive.ValidationReport{}, fmt.Errorf("读取归档会话 %s: %w", receipt.SessionID, err)
 	}
 	report := a.Archive.ValidateReport(receipt, session, a.Store)
 	return report, nil

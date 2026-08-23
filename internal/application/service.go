@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"sensory-blind-review/internal/archive"
@@ -16,10 +17,16 @@ type Service struct {
 	Archive  *archive.Service
 	Receipts *archive.Registry
 	now      func() time.Time
+	viewMu   sync.RWMutex
+	views    map[string]*SessionView
 }
 
 func New(store *repository.Store, arch *archive.Service, receipts *archive.Registry) *Service {
-	return &Service{Store: store, Archive: arch, Receipts: receipts, now: func() time.Time { return time.Now().UTC() }}
+	return &Service{
+		Store: store, Archive: arch, Receipts: receipts,
+		now:   func() time.Time { return time.Now().UTC() },
+		views: map[string]*SessionView{},
+	}
 }
 func newID(prefix string) string {
 	b := make([]byte, 8)
@@ -230,11 +237,24 @@ func (a *Service) mutateWith(id, actor string, version int64, action string, fn 
 }
 
 func (a *Service) GetSession(id, actor string) (*SessionView, error) {
+	a.viewMu.RLock()
+	cached := a.views[id]
+	a.viewMu.RUnlock()
+	if cached != nil {
+		return cached, nil
+	}
 	session, err := a.Store.GetSession(id)
 	if err != nil {
 		return nil, err
 	}
-	return a.view(session, actor), nil
+	view := a.view(session, actor)
+	a.viewMu.Lock()
+	if cached = a.views[id]; cached == nil {
+		a.views[id] = view
+		cached = view
+	}
+	a.viewMu.Unlock()
+	return cached, nil
 }
 func (a *Service) ListSessions(actor string) []*SessionView {
 	sessions := a.Store.ListSessions()

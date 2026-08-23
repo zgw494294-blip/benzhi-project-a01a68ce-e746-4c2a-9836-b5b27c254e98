@@ -23,11 +23,12 @@ type IdempotentResult struct {
 }
 
 type Store struct {
-	dir        string
-	mu         sync.Mutex
-	events     []Event
-	sessions   map[string]*domain.TastingSession
-	idempotent map[string]IdempotentResult
+	dir                  string
+	mu                   sync.Mutex
+	events               []Event
+	sessions             map[string]*domain.TastingSession
+	idempotent           map[string]IdempotentResult
+	persistedEventReader *os.File
 }
 
 func Open(dir string) (*Store, error) {

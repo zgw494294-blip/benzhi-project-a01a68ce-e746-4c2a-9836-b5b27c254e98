@@ -13,15 +13,20 @@ import (
 
 func (s *Store) PersistedEventChainHash() (string, error) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	path := filepath.Join(s.dir, "events.jsonl")
-	s.mu.Unlock()
-	f, err := os.Open(path)
-	if err != nil {
+	if s.persistedEventReader == nil {
+		f, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+		s.persistedEventReader = f
+	}
+	if _, err := s.persistedEventReader.Seek(0, 0); err != nil {
 		return "", err
 	}
-	defer f.Close()
 	var events []Event
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(s.persistedEventReader)
 	for scanner.Scan() {
 		var event Event
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {

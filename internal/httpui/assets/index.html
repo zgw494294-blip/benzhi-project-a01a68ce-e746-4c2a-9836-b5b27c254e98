@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>盲样感官评审工作台</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header><h1>盲样感官评审工作台</h1><p id="statusLine">未选择会话</p></header>
+  <main>
+    <section class="toolbar">
+      <label>当前用户<input id="user" value="host-1"></label>
+      <label>评审会话<select id="session"><option value="">请选择</option></select></label>
+      <button id="refresh" type="button">刷新</button>
+    </section>
+    <nav class="tabs" aria-label="工作视图">
+      <button data-tab="host" class="active">主持配置</button>
+      <button data-tab="reviewer">评审任务</button>
+      <button data-tab="verify">核验裁定</button>
+      <button data-tab="reveal">解盲结论</button>
+      <button data-tab="archive">归档查询</button>
+    </nav>
+
+    <section id="host" class="view active">
+      <div class="split">
+        <form id="sessionForm" class="panel">
+          <h2>会话配置</h2>
+          <label>会话名称<input name="name" required></label>
+          <label>产品类别<input name="category" required></label>
+          <label>主持人<input name="host" value="host-1" required></label>
+          <label>评审员<input name="reviewers" value="reviewer-1,reviewer-2" required></label>
+          <label>计划时间<input name="scheduled" type="datetime-local" required></label>
+          <label>会话种子<input name="seed" value="sensory-plan" required></label>
+          <label>量表维度<textarea name="scales" rows="3" required>taste,口感,0,10,1
+aroma,香气,0,10,2</textarea></label>
+          <div class="actions"><button type="submit">创建会话</button><button id="updateSession" type="button">更新当前会话</button></div>
+        </form>
+        <form id="sampleForm" class="panel">
+          <h2>批量登记样品</h2>
+          <label>样品清单<textarea name="samples" rows="8" required>s1,B01,样品甲,lot-1,
+s2,B02,样品乙,lot-1,
+s3,B03,样品丙,lot-1,</textarea></label>
+          <button type="submit">批量登记</button>
+        </form>
+      </div>
+      <div class="panel"><h2>会话控制</h2><div id="hostSummary"></div><div id="hostActions" class="actions"></div></div>
+    </section>
+
+    <section id="reviewer" class="view">
+      <div class="panel"><h2>隔离评审任务</h2><div id="tasks" class="task-list"></div></div>
+    </section>
+
+    <section id="verify" class="view">
+      <div class="panel"><h2>核验发现</h2><div id="progress"></div><div id="findings" class="finding-list"></div><div class="actions"><button id="batchResolve" type="button">提交批量裁定</button><button id="reverify" type="button">重新核验</button></div></div>
+    </section>
+
+    <section id="reveal" class="view">
+      <div class="panel">
+        <h2>解盲审批</h2>
+        <label>批准角色<select id="approvalRole"><option value="quality">质量复核</option><option value="independent">独立批准</option></select></label>
+        <button id="approve" type="button">批准解盲</button><button id="seal" type="button">封存归档</button>
+        <div id="conclusions"></div>
+      </div>
+    </section>
+
+    <section id="archive" class="view">
+      <div class="panel"><h2>归档凭据</h2><button id="loadArchives" type="button">查询归档</button><div id="archives"></div></div>
+    </section>
+  </main>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
